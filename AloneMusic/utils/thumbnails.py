@@ -1,12 +1,3 @@
-#
-# Copyright (C) 2021-2022 by TheAloneteam@Github, < https://github.com/TheAloneTeam >.
-#
-# This file is part of < https://github.com/TheAloneTeam/AloneMusic > project,
-# and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/TheAloneTeam/AloneMusic/blob/master/LICENSE >
-#
-# All rights reserved.
-
 import os
 import re
 import random
@@ -39,9 +30,6 @@ def truncate(text):
 
 
 async def get_thumb(videoid: str):
-    # if os.path.isfile(f"cache/{videoid}.png"):
-    #    return f"cache/{videoid}.png"
-
     url = f"https://www.youtube.com/watch?v={videoid}"
     try:
         results = VideosSearch(url, limit=1)
@@ -77,78 +65,54 @@ async def get_thumb(videoid: str):
         youtube = Image.open(f"cache/thumb{videoid}.png")
         image1 = changeImageSize(1280, 720, youtube)
         image2 = image1.convert("RGBA")
-        background = image2.filter(filter=ImageFilter.BoxBlur(20))
-        enhancer = ImageEnhance.Brightness(background)
-        background = enhancer.enhance(0.6)
 
+        # Professional cinematic background
+        background = image2.filter(filter=ImageFilter.GaussianBlur(25))
+        enhancer = ImageEnhance.Brightness(background)
+        background = enhancer.enhance(0.55)
+        enhancer = ImageEnhance.Contrast(background)
+        background = enhancer.enhance(1.2)
+
+        # Centered logo with shadow effect
         Xcenter = youtube.width / 2
         Ycenter = youtube.height / 2
         x1 = Xcenter - 250
         y1 = Ycenter - 250
         x2 = Xcenter + 250
         y2 = Ycenter + 250
-        rand = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        rand = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
         logo = youtube.crop((x1, y1, x2, y2))
         logo.thumbnail((370, 370), Image.ANTIALIAS)
-        logo = ImageOps.expand(logo, border=17, fill=rand)
-        background.paste(logo, (100, 150))
+        logo_shadow = ImageOps.expand(logo, border=20, fill=(0,0,0))
+        background.paste(logo_shadow, (95, 145), logo_shadow)
+        background.paste(logo, (100, 150), logo)
 
+        # Drawing text
         draw = ImageDraw.Draw(background)
-        arial = ImageFont.truetype("AloneMusic/assets/font2.ttf", 30)
-        font = ImageFont.truetype("AloneMusic/assets/font.ttf", 30)
-        tfont = ImageFont.truetype("AloneMusic/assets/font3.ttf", 45)
+        arial = ImageFont.truetype("AloneMusic/assets/font2.ttf", 32)
+        font = ImageFont.truetype("AloneMusic/assets/font.ttf", 32)
+        tfont = ImageFont.truetype("AloneMusic/assets/font3.ttf", 48)
 
         stitle = truncate(title)
-        draw.text(
-            (565, 180),
-            stitle[0],
-            (255, 255, 255),
-            font=tfont,
-        )
-        draw.text(
-            (565, 230),
-            stitle[1],
-            (255, 255, 255),
-            font=tfont,
-        )
-        draw.text(
-            (565, 320),
-            f"{channel} | {views[:23]}",
-            (255, 255, 255),
-            font=arial,
-        )
-        draw.line(
-            [(565, 385), (1130, 385)],
-            fill="white",
-            width=8,
-            joint="curve",
-        )
-        draw.line(
-            [(565, 385), (999, 385)],
-            fill=rand,
-            width=8,
-            joint="curve",
-        )
-        draw.ellipse(
-            [(999, 375), (1020, 395)],
-            outline=rand,
-            fill=rand,
-            width=15,
-        )
-        draw.text(
-            (565, 400),
-            "00:00",
-            (255, 255, 255),
-            font=arial,
-        )
-        draw.text(
-            (1080, 400),
-            f"{duration[:23]}",
-            (255, 255, 255),
-            font=arial,
-        )
+        draw.text((565, 180), stitle[0], (255, 255, 255), font=tfont)
+        draw.text((565, 240), stitle[1], (255, 255, 255), font=tfont)
+        draw.text((565, 330), f"{channel} | {views[:23]}", (255, 255, 255), font=arial)
+
+        # Progress line with gradient
+        line_start = (565, 400)
+        line_end = (1130, 400)
+        for i in range(565, 1130):
+            blend = int((i-565)/(1130-565)*255)
+            draw.line([(i, 400), (i, 400)], fill=(blend, blend, 255), width=6)
+
+        # Duration and small indicator
+        draw.ellipse([(999, 390), (1015, 405)], outline=rand, fill=rand, width=10)
+        draw.text((565, 420), "00:00", (255, 255, 255), font=arial)
+        draw.text((1080, 420), f"{duration[:23]}", (255, 255, 255), font=arial)
+
+        # Paste icons
         picons = icons.resize((580, 62))
-        background.paste(picons, (565, 450), picons)
+        background.paste(picons, (565, 460), picons)
 
         try:
             os.remove(f"cache/thumb{videoid}.png")
