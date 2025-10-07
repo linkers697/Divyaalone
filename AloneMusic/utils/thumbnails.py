@@ -66,25 +66,20 @@ async def get_thumb(videoid: str):
         image1 = changeImageSize(1280, 720, youtube)
         image2 = image1.convert("RGBA")
 
-        # Professional cinematic background
-        background = image2.filter(filter=ImageFilter.GaussianBlur(25))
-        enhancer = ImageEnhance.Brightness(background)
-        background = enhancer.enhance(0.55)
-        enhancer = ImageEnhance.Contrast(background)
-        background = enhancer.enhance(1.2)
+        # Cinematic background
+        background = image2.filter(ImageFilter.GaussianBlur(25))
+        background = ImageEnhance.Brightness(background).enhance(0.55)
+        background = ImageEnhance.Contrast(background).enhance(1.2)
 
-        # Centered logo with shadow effect
-        Xcenter = youtube.width / 2
-        Ycenter = youtube.height / 2
-        x1 = Xcenter - 250
-        y1 = Ycenter - 250
-        x2 = Xcenter + 250
-        y2 = Ycenter + 250
-        rand = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
+        # Logo crop and shadow
+        Xcenter, Ycenter = youtube.width / 2, youtube.height / 2
+        x1, y1 = Xcenter - 250, Ycenter - 250
+        x2, y2 = Xcenter + 250, Ycenter + 250
+        rand_color = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
         logo = youtube.crop((x1, y1, x2, y2))
         logo.thumbnail((370, 370), Image.ANTIALIAS)
-        logo_shadow = ImageOps.expand(logo, border=20, fill=(0,0,0))
-        background.paste(logo_shadow, (95, 145), logo_shadow)
+        shadow = ImageOps.expand(logo, border=20, fill=(0, 0, 0))
+        background.paste(shadow, (95, 145), shadow)
         background.paste(logo, (100, 150), logo)
 
         # Drawing text
@@ -98,15 +93,13 @@ async def get_thumb(videoid: str):
         draw.text((565, 240), stitle[1], (255, 255, 255), font=tfont)
         draw.text((565, 330), f"{channel} | {views[:23]}", (255, 255, 255), font=arial)
 
-        # Progress line with gradient
-        line_start = (565, 400)
-        line_end = (1130, 400)
-        for i in range(565, 1130):
-            blend = int((i-565)/(1130-565)*255)
+        # Dynamic gradient line (subtle animation effect)
+        line_start_x, line_end_x = 565, 1130
+        for i in range(line_start_x, line_end_x, 2):
+            blend = int((i - line_start_x) / (line_end_x - line_start_x) * 255)
             draw.line([(i, 400), (i, 400)], fill=(blend, blend, 255), width=6)
 
-        # Duration and small indicator
-        draw.ellipse([(999, 390), (1015, 405)], outline=rand, fill=rand, width=10)
+        draw.ellipse([(999, 390), (1015, 405)], outline=rand_color, fill=rand_color, width=10)
         draw.text((565, 420), "00:00", (255, 255, 255), font=arial)
         draw.text((1080, 420), f"{duration[:23]}", (255, 255, 255), font=arial)
 
@@ -114,10 +107,12 @@ async def get_thumb(videoid: str):
         picons = icons.resize((580, 62))
         background.paste(picons, (565, 460), picons)
 
+        # Remove temp thumbnail
         try:
             os.remove(f"cache/thumb{videoid}.png")
         except:
             pass
+
         tpath = f"cache/{videoid}.png"
         background.save(tpath)
         return tpath
